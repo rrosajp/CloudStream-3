@@ -12,6 +12,11 @@ import androidx.recyclerview.widget.RecyclerView
 import com.lagradost.cloudstream3.R
 import com.lagradost.cloudstream3.mvvm.logError
 import com.lagradost.cloudstream3.syncproviders.AccountManager
+import com.lagradost.cloudstream3.syncproviders.AccountManager.Companion.aniListApi
+import com.lagradost.cloudstream3.syncproviders.AccountManager.Companion.malApi
+import com.lagradost.cloudstream3.syncproviders.AccountManager.Companion.openSubtitlesApi
+import com.lagradost.cloudstream3.syncproviders.AuthAPI
+import com.lagradost.cloudstream3.syncproviders.InAppAuthAPI
 import com.lagradost.cloudstream3.syncproviders.OAuth2API
 import com.lagradost.cloudstream3.ui.settings.SettingsFragment.Companion.beneneCount
 import com.lagradost.cloudstream3.ui.settings.SettingsFragment.Companion.getPref
@@ -25,7 +30,8 @@ class SettingsAccount : PreferenceFragmentCompat() {
         super.onViewCreated(view, savedInstanceState)
         setUpToolbar(R.string.category_credits)
     }
-    private fun showLoginInfo(api: AccountManager, info: OAuth2API.LoginInfo) {
+
+    private fun showLoginInfo(api: AccountManager, info: AuthAPI.LoginInfo) {
         val builder =
             AlertDialog.Builder(context ?: return, R.style.AlertDialogCustom)
                 .setView(R.layout.account_managment)
@@ -47,6 +53,24 @@ class SettingsAccount : PreferenceFragmentCompat() {
         }
     }
 
+    private fun addAccount(api: AccountManager) {
+        try {
+            when (api) {
+                is OAuth2API -> {
+                    api.authenticate()
+                }
+                is InAppAuthAPI -> {
+                    throw NotImplementedError()
+                }
+                else -> {
+                    throw NotImplementedError("You are trying to add an account that has an unknown login method")
+                }
+            }
+        } catch (e: Exception) {
+            logError(e)
+        }
+    }
+
     private fun showAccountSwitch(context: Context, api: AccountManager) {
         val accounts = api.getAccounts() ?: return
 
@@ -55,16 +79,12 @@ class SettingsAccount : PreferenceFragmentCompat() {
         val dialog = builder.show()
 
         dialog.findViewById<TextView>(R.id.account_add)?.setOnClickListener {
-            try {
-                api.authenticate()
-            } catch (e: Exception) {
-                logError(e)
-            }
+            addAccount(api)
         }
 
         val ogIndex = api.accountIndex
 
-        val items = ArrayList<OAuth2API.LoginInfo>()
+        val items = ArrayList<AuthAPI.LoginInfo>()
 
         for (index in accounts) {
             api.accountIndex = index
@@ -97,32 +117,30 @@ class SettingsAccount : PreferenceFragmentCompat() {
 
         val syncApis =
             listOf(
-                Pair(R.string.mal_key, OAuth2API.malApi), Pair(
+                Pair(R.string.mal_key, malApi), Pair(
                     R.string.anilist_key,
-                    OAuth2API.aniListApi
+                    aniListApi
+                ),
+                Pair(
+                    R.string.opensubtitles_key,
+                    openSubtitlesApi
                 )
             )
         for ((key, api) in syncApis) {
             getPref(key)?.apply {
                 title =
                     getString(R.string.login_format).format(api.name, getString(R.string.account))
-                setOnPreferenceClickListener { _ ->
+                setOnPreferenceClickListener {
                     val info = api.loginInfo()
                     if (info != null) {
                         showLoginInfo(api, info)
                     } else {
-                        try {
-                            api.authenticate()
-                        } catch (e: Exception) {
-                            logError(e)
-                        }
+                        addAccount(api)
                     }
                     return@setOnPreferenceClickListener true
                 }
             }
         }
-
-
 
         try {
             beneneCount = settingsManager.getInt(getString(R.string.benene_count), 0)

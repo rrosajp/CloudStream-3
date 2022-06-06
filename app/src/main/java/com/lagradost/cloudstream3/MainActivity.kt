@@ -39,9 +39,9 @@ import com.lagradost.cloudstream3.movieproviders.NginxProvider
 import com.lagradost.cloudstream3.mvvm.logError
 import com.lagradost.cloudstream3.network.initClient
 import com.lagradost.cloudstream3.receivers.VideoDownloadRestartReceiver
-import com.lagradost.cloudstream3.syncproviders.OAuth2API.Companion.OAuth2Apis
-import com.lagradost.cloudstream3.syncproviders.OAuth2API.Companion.OAuth2accountApis
-import com.lagradost.cloudstream3.syncproviders.OAuth2API.Companion.appString
+import com.lagradost.cloudstream3.syncproviders.AccountManager.Companion.OAuth2Apis
+import com.lagradost.cloudstream3.syncproviders.AccountManager.Companion.accountManagers
+import com.lagradost.cloudstream3.syncproviders.AccountManager.Companion.appString
 import com.lagradost.cloudstream3.ui.APIRepository
 import com.lagradost.cloudstream3.ui.download.DOWNLOAD_NAVIGATE_TO
 import com.lagradost.cloudstream3.ui.result.ResultFragment
@@ -368,7 +368,7 @@ class MainActivity : AppCompatActivity(), ColorPickerDialogListener {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         // init accounts
-        for (api in OAuth2accountApis) {
+        for (api in accountManagers) {
             api.init()
         }
 

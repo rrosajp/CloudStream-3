@@ -13,9 +13,9 @@ data class LazySubtitle(
                 it.name
                 runBlocking {
                     val authorization = it.authorize(
-                        AbstractSubtitleEntities.SubtitleOAuthEntity(
+                        //AbstractSubtitleEntities.SubtitleOAuthEntity(
 
-                        )
+                        //)
                     )
                 }
                 it

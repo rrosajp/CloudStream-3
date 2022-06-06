@@ -9,6 +9,9 @@
             android:key="@string/anilist_key"
             android:icon="@drawable/ic_anilist_icon" />
     <Preference
+            android:key="@string/opensubtitles_key"
+            android:icon="@drawable/open_subtitles_icon" />
+    <Preference
             android:key="@string/legal_notice_key"
             android:title="@string/legal_notice"
             android:icon="@drawable/ic_baseline_warning_24" />

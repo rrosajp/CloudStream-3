@@ -437,6 +437,8 @@
     <!-- account stuff -->
     <string name="anilist_key" translatable="false">anilist_key</string>
     <string name="mal_key" translatable="false">mal_key</string>
+    <string name="opensubtitles_key" translatable="false">opensubtitles_key</string>
+
     <!--
     <string name="mal_account_settings" translatable="false">MAL</string>
     <string name="anilist_account_settings" translatable="false">AniList</string>

@@ -40,6 +40,8 @@ import com.lagradost.cloudstream3.utils.UIHelper.dismissSafe
 import com.lagradost.cloudstream3.utils.UIHelper.hideSystemUI
 import com.lagradost.cloudstream3.utils.UIHelper.popCurrentPage
 import kotlinx.android.synthetic.main.dialog_online_subtitles.*
+import kotlinx.android.synthetic.main.dialog_online_subtitles.apply_btt
+import kotlinx.android.synthetic.main.dialog_online_subtitles.cancel_btt
 import kotlinx.android.synthetic.main.fragment_player.*
 import kotlinx.android.synthetic.main.player_custom_layout.*
 import kotlinx.android.synthetic.main.player_select_source_and_subs.*
@@ -744,22 +746,17 @@ class GeneratorPlayer : FullScreenPlayer() {
     fun setTitle() {
         var playerVideoTitle = getPlayerVideoTitle()
 
-            //Hide title, if set in setting
-            if (limitTitle < 0) {
-                player_video_title?.visibility = View.GONE
-            } else {
-                //Truncate video title if it exceeds limit
-                val differenceInLength = playerVideoTitle.length - limitTitle
-                val margin = 3 //If the difference is smaller than or equal to this value, ignore it
-                if (limitTitle > 0 && differenceInLength > margin) {
-                    playerVideoTitle = playerVideoTitle.substring(0, limitTitle - 1) + "..."
-                }
+        //Hide title, if set in setting
+        if (limitTitle < 0) {
+            player_video_title?.visibility = View.GONE
+        } else {
+            //Truncate video title if it exceeds limit
+            val differenceInLength = playerVideoTitle.length - limitTitle
+            val margin = 3 //If the difference is smaller than or equal to this value, ignore it
+            if (limitTitle > 0 && differenceInLength > margin) {
+                playerVideoTitle = playerVideoTitle.substring(0, limitTitle - 1) + "..."
             }
-
-            player_episode_filler_holder?.isVisible = isFiller ?: false
-            player_video_title?.text = playerVideoTitle
         }
-
         val isFiller: Boolean? = (currentMeta as? ResultEpisode)?.isFiller
 
         player_episode_filler_holder?.isVisible = isFiller ?: false
