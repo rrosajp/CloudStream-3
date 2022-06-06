@@ -32,7 +32,10 @@ abstract class AccountManager(private val defIndex: Int) : AuthAPI {
                 SyncRepo(malApi), SyncRepo(aniListApi)
             )
 
-        val InAppAuth
+        val inAppAuths
+            get() = listOf(openSubtitlesApi)
+
+        val subtitleProviders
             get() = listOf(
                 openSubtitlesApi
             )
@@ -41,6 +44,8 @@ abstract class AccountManager(private val defIndex: Int) : AuthAPI {
 
         val unixTime: Long
             get() = System.currentTimeMillis() / 1000L
+        val unixTimeMs: Long
+            get() = System.currentTimeMillis()
 
         const val maxStale = 60 * 10
 

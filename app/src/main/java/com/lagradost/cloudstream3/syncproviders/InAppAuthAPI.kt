@@ -1,16 +1,20 @@
 package com.lagradost.cloudstream3.syncproviders
 
+import androidx.annotation.WorkerThread
+
 interface InAppAuthAPI : AuthAPI {
     data class LoginData(
-        val username: String?,
-        val password: String?,
-        val server: String?,
+        val username: String? = null,
+        val password: String? = null,
+        val server: String? = null,
+        val email: String? = null,
     )
 
     // this is for displaying the UI
     val requiresPassword: Boolean
     val requiresUsername: Boolean
     val requiresServer: Boolean
+    val requiresEmail: Boolean
 
     // if this is false we can assume that getLatestLoginData returns null and wont be called
     // this is used in case for some reason it is not preferred to store any login data besides the "token" or encrypted data
@@ -26,8 +30,19 @@ interface InAppAuthAPI : AuthAPI {
 abstract class InAppAuthAPIManager(defIndex: Int) : AccountManager(defIndex), InAppAuthAPI {
     override val requiresPassword = true
     override val requiresUsername = true
+    override val requiresEmail = false
     override val requiresServer = false
     override val storesPasswordInPlainText = true
+    override val requiresLogin = true
+
+    // runs on startup
+    @WorkerThread
+    open suspend fun initialize() {
+    }
+
+    override fun logOut() {
+        removeAccountKeys()
+    }
 
     override val idPrefix: String
         get() = throw NotImplementedError()
@@ -46,10 +61,6 @@ abstract class InAppAuthAPIManager(defIndex: Int) : AccountManager(defIndex), In
     }
 
     override fun loginInfo(): AuthAPI.LoginInfo? {
-        throw NotImplementedError()
-    }
-
-    override fun logOut() {
         throw NotImplementedError()
     }
 }

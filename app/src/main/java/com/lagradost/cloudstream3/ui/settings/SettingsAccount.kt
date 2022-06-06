@@ -3,12 +3,14 @@ package com.lagradost.cloudstream3.ui.settings
 import android.content.Context
 import android.os.Bundle
 import android.view.View
-import android.widget.ImageView
 import android.widget.TextView
+import androidx.annotation.UiThread
 import androidx.appcompat.app.AlertDialog
+import androidx.core.view.isVisible
 import androidx.preference.PreferenceFragmentCompat
 import androidx.preference.PreferenceManager
 import androidx.recyclerview.widget.RecyclerView
+import com.lagradost.cloudstream3.CommonActivity.showToast
 import com.lagradost.cloudstream3.R
 import com.lagradost.cloudstream3.mvvm.logError
 import com.lagradost.cloudstream3.syncproviders.AccountManager
@@ -21,9 +23,14 @@ import com.lagradost.cloudstream3.syncproviders.OAuth2API
 import com.lagradost.cloudstream3.ui.settings.SettingsFragment.Companion.beneneCount
 import com.lagradost.cloudstream3.ui.settings.SettingsFragment.Companion.getPref
 import com.lagradost.cloudstream3.ui.settings.SettingsFragment.Companion.setUpToolbar
+import com.lagradost.cloudstream3.utils.Coroutines.ioSafe
 import com.lagradost.cloudstream3.utils.UIHelper.dismissSafe
 import com.lagradost.cloudstream3.utils.UIHelper.hideKeyboard
 import com.lagradost.cloudstream3.utils.UIHelper.setImage
+import kotlinx.android.synthetic.main.account_managment.*
+import kotlinx.android.synthetic.main.account_managment.account_profile_picture
+import kotlinx.android.synthetic.main.account_single.*
+import kotlinx.android.synthetic.main.add_account_input.*
 
 class SettingsAccount : PreferenceFragmentCompat() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
@@ -37,8 +44,10 @@ class SettingsAccount : PreferenceFragmentCompat() {
                 .setView(R.layout.account_managment)
         val dialog = builder.show()
 
-        dialog.findViewById<ImageView>(R.id.account_profile_picture)?.setImage(info.profilePicture)
-        dialog.findViewById<TextView>(R.id.account_logout)?.setOnClickListener {
+        dialog.account_profile_picture_holder?.isVisible =
+            dialog.account_profile_picture?.setImage(info.profilePicture) == true
+
+        dialog.account_logout?.setOnClickListener {
             api.logOut()
             dialog.dismissSafe(activity)
         }
@@ -46,13 +55,15 @@ class SettingsAccount : PreferenceFragmentCompat() {
         (info.name ?: context?.getString(R.string.no_data))?.let {
             dialog.findViewById<TextView>(R.id.account_name)?.text = it
         }
-        dialog.findViewById<TextView>(R.id.account_site)?.text = api.name
-        dialog.findViewById<TextView>(R.id.account_switch_account)?.setOnClickListener {
+
+        dialog.account_site?.text = api.name
+        dialog.account_switch_account?.setOnClickListener {
             dialog.dismissSafe(activity)
             showAccountSwitch(it.context, api)
         }
     }
 
+    @UiThread
     private fun addAccount(api: AccountManager) {
         try {
             when (api) {
@@ -60,7 +71,57 @@ class SettingsAccount : PreferenceFragmentCompat() {
                     api.authenticate()
                 }
                 is InAppAuthAPI -> {
-                    throw NotImplementedError()
+                    val builder =
+                        AlertDialog.Builder(context ?: return, R.style.AlertDialogCustom)
+                            .setView(R.layout.add_account_input)
+                    val dialog = builder.show()
+                    dialog.login_email_input?.isVisible = api.requiresEmail
+                    dialog.login_password_input?.isVisible = api.requiresPassword
+                    dialog.login_server_input?.isVisible = api.requiresServer
+                    dialog.login_username_input?.isVisible = api.requiresUsername
+                    dialog.text1?.text = api.name
+
+                    if (api.storesPasswordInPlainText) {
+                        api.getLatestLoginData()?.let { data ->
+                            dialog.login_email_input?.setText(data.email ?: "")
+                            dialog.login_server_input?.setText(data.server ?: "")
+                            dialog.login_username_input?.setText(data.username ?: "")
+                            dialog.login_password_input?.setText(data.password ?: "")
+                        }
+                    }
+
+                    dialog.apply_btt?.setOnClickListener {
+                        val loginData = InAppAuthAPI.LoginData(
+                            username = if (api.requiresUsername) dialog.login_username_input?.text?.toString() else null,
+                            password = if (api.requiresPassword) dialog.login_password_input?.text?.toString() else null,
+                            email = if (api.requiresEmail) dialog.login_email_input?.text?.toString() else null,
+                            server = if (api.requiresServer) dialog.login_server_input?.text?.toString() else null,
+                        )
+                        ioSafe {
+                            val isSuccessful = try {
+                                api.login(loginData)
+                            } catch (e: Exception) {
+                                logError(e)
+                                false
+                            }
+                            activity?.runOnUiThread {
+                                try {
+                                    showToast(
+                                        activity,
+                                        getString(if (isSuccessful) R.string.authenticated_user else R.string.authenticated_user_fail).format(
+                                            api.name
+                                        )
+                                    )
+                                } catch (e: Exception) {
+                                    logError(e) // format might fail
+                                }
+                            }
+                        }
+                        dialog.dismissSafe(activity)
+                    }
+                    dialog.cancel_btt?.setOnClickListener {
+                        dialog.dismissSafe(activity)
+                    }
                 }
                 else -> {
                     throw NotImplementedError("You are trying to add an account that has an unknown login method")

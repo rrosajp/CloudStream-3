@@ -1,28 +1,17 @@
 package com.lagradost.cloudstream3.subtitles
 
 import androidx.annotation.WorkerThread
-import com.lagradost.cloudstream3.subtitles.AbstractSubtitleEntities.*
+import com.lagradost.cloudstream3.subtitles.AbstractSubtitleEntities.SubtitleEntity
+import com.lagradost.cloudstream3.subtitles.AbstractSubtitleEntities.SubtitleSearch
 
-abstract class AbstractSubProvider{
-    open val name = ""
-    open var ouath: SubtitleOAuthEntity = SubtitleOAuthEntity()
-
-    fun overrideCredentials(data: SubtitleOAuthEntity) {
-        this.ouath = data
-    }
-
+interface AbstractSubProvider {
     @WorkerThread
-    open suspend fun authorize() {
+    suspend fun search(query: SubtitleSearch): List<SubtitleEntity>? {
         throw NotImplementedError()
     }
 
     @WorkerThread
-    open suspend fun search(query: SubtitleSearch): List<SubtitleEntity> {
-        throw NotImplementedError()
-    }
-
-    @WorkerThread
-    open suspend fun load(data: SubtitleEntity): String {
+    suspend fun load(data: SubtitleEntity): String? {
         throw NotImplementedError()
     }
 }

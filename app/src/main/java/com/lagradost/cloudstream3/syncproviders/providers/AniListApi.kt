@@ -29,6 +29,7 @@ class AniListApi(index: Int) : AccountManager(index), SyncAPI {
     override val idPrefix = "anilist"
     override var mainUrl = "https://anilist.co"
     override val icon = R.drawable.ic_anilist_icon
+    override val requiresLogin = true
 
     override fun loginInfo(): AuthAPI.LoginInfo? {
         // context.getUser(true)?.

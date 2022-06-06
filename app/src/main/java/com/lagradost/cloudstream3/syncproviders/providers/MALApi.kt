@@ -34,6 +34,7 @@ class MALApi(index: Int) : AccountManager(index), SyncAPI {
     override val idPrefix = "mal"
     override var mainUrl = "https://myanimelist.net"
     override val icon = R.drawable.mal_logo
+    override val requiresLogin = true
 
     override fun logOut() {
         removeAccountKeys()

@@ -42,6 +42,7 @@ import com.lagradost.cloudstream3.receivers.VideoDownloadRestartReceiver
 import com.lagradost.cloudstream3.syncproviders.AccountManager.Companion.OAuth2Apis
 import com.lagradost.cloudstream3.syncproviders.AccountManager.Companion.accountManagers
 import com.lagradost.cloudstream3.syncproviders.AccountManager.Companion.appString
+import com.lagradost.cloudstream3.syncproviders.AccountManager.Companion.inAppAuths
 import com.lagradost.cloudstream3.ui.APIRepository
 import com.lagradost.cloudstream3.ui.download.DOWNLOAD_NAVIGATE_TO
 import com.lagradost.cloudstream3.ui.result.ResultFragment
@@ -370,6 +371,16 @@ class MainActivity : AppCompatActivity(), ColorPickerDialogListener {
         // init accounts
         for (api in accountManagers) {
             api.init()
+        }
+
+        ioSafe {
+            inAppAuths.apmap { api ->
+                try {
+                    api.initialize()
+                } catch (e: Exception) {
+                    logError(e)
+                }
+            }
         }
 
         SearchResultBuilder.updateCache(this)

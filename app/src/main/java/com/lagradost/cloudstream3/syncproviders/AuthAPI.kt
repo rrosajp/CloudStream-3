@@ -4,6 +4,8 @@ interface AuthAPI {
     val name: String
     val icon: Int?
 
+    val requiresLogin : Boolean
+
     // don't change this as all keys depend on it
     val idPrefix: String
 

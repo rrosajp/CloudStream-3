@@ -9,6 +9,8 @@ class Dropbox : OAuth2API {
     override var name = "Dropbox"
     override val key = "zlqsamadlwydvb2"
     override val redirectUrl = "dropboxlogin"
+    override val requiresLogin = true
+
     override val icon: Int
         get() = TODO("Not yet implemented")
 

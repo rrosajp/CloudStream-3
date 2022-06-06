@@ -12,11 +12,7 @@ class AbstractSubtitleEntities {
         var seasonNumber: Int? = null,
         var year: Int? = null
     )
-    data class SubtitleOAuthEntity(
-        var user: String = "",
-        var pass: String = "",
-        var access_token: String = "",
-    )
+
     data class SubtitleSearch(
         var query: String = "",
         var imdb: Long? = null,
