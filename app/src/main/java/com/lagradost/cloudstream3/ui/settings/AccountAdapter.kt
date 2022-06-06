@@ -11,7 +11,7 @@ import com.lagradost.cloudstream3.R
 import com.lagradost.cloudstream3.syncproviders.AuthAPI
 import com.lagradost.cloudstream3.utils.UIHelper.setImage
 
-class AccountClickCallback(val action: Int, val view : View, val card: AuthAPI.LoginInfo)
+class AccountClickCallback(val action: Int, val view: View, val card: AuthAPI.LoginInfo)
 
 class AccountAdapter(
     val cardList: List<AuthAPI.LoginInfo>,
@@ -50,13 +50,11 @@ class AccountAdapter(
 
         fun bind(card: AuthAPI.LoginInfo) {
             // just in case name is null account index will show, should never happened
-            accountName.text = card.name ?: "%s %d".format(accountName.context.getString(R.string.account), card.accountIndex)
-            if(card.profilePicture.isNullOrEmpty()) {
-                pfp.isVisible = false
-            } else {
-                pfp.isVisible = true
-                pfp.setImage(card.profilePicture)
-            }
+            accountName.text = card.name ?: "%s %d".format(
+                accountName.context.getString(R.string.account),
+                card.accountIndex
+            )
+            pfp.isVisible = pfp.setImage(card.profilePicture)
 
             itemView.setOnClickListener {
                 clickCallback.invoke(AccountClickCallback(0, itemView, card))

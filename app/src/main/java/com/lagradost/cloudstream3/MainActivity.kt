@@ -35,7 +35,6 @@ import com.lagradost.cloudstream3.CommonActivity.onDialogDismissedEvent
 import com.lagradost.cloudstream3.CommonActivity.onUserLeaveHint
 import com.lagradost.cloudstream3.CommonActivity.showToast
 import com.lagradost.cloudstream3.CommonActivity.updateLocale
-import com.lagradost.cloudstream3.movieproviders.NginxProvider
 import com.lagradost.cloudstream3.mvvm.logError
 import com.lagradost.cloudstream3.network.initClient
 import com.lagradost.cloudstream3.receivers.VideoDownloadRestartReceiver
@@ -133,7 +132,6 @@ class MainActivity : AppCompatActivity(), ColorPickerDialogListener {
             R.id.navigation_download_child,
             R.id.navigation_subtitles,
             R.id.navigation_chrome_subtitles,
-            R.id.navigation_settings_nginx,
             R.id.navigation_settings_player,
             R.id.navigation_settings_updates,
             R.id.navigation_settings_ui,
@@ -402,68 +400,6 @@ class MainActivity : AppCompatActivity(), ColorPickerDialogListener {
             false
         }
 
-        fun addNginxToJson(data: java.util.HashMap<String, ProvidersInfoJson>): java.util.HashMap<String, ProvidersInfoJson> {
-            try {
-                val settingsManager = PreferenceManager.getDefaultSharedPreferences(this)
-                val nginxUrl =
-                    settingsManager.getString(getString(R.string.nginx_url_key), "nginx_url_key")
-                        .toString()
-                val nginxCredentials =
-                    settingsManager.getString(
-                        getString(R.string.nginx_credentials),
-                        "nginx_credentials"
-                    )
-                        .toString()
-                val storedNginxProvider = NginxProvider()
-                if (nginxUrl == "nginx_url_key" || nginxUrl == "") { // if key is default value, or empty:
-                    data[storedNginxProvider.javaClass.simpleName] = ProvidersInfoJson(
-                        url = nginxUrl,
-                        name = storedNginxProvider.name,
-                        status = PROVIDER_STATUS_DOWN,  // the provider will not be display
-                        credentials = nginxCredentials
-                    )
-                } else {  // valid url
-                    data[storedNginxProvider.javaClass.simpleName] = ProvidersInfoJson(
-                        url = nginxUrl,
-                        name = storedNginxProvider.name,
-                        status = PROVIDER_STATUS_OK,
-                        credentials = nginxCredentials
-                    )
-                }
-
-                return data
-            } catch (e: Exception) {
-                logError(e)
-                return data
-            }
-        }
-
-        fun createNginxJson(): ProvidersInfoJson? { //java.util.HashMap<String, ProvidersInfoJson>
-            return try {
-                val settingsManager = PreferenceManager.getDefaultSharedPreferences(this)
-                val nginxUrl =
-                    settingsManager.getString(getString(R.string.nginx_url_key), "nginx_url_key")
-                        .toString()
-                val nginxCredentials = settingsManager.getString(
-                    getString(R.string.nginx_credentials),
-                    "nginx_credentials"
-                ).toString()
-                if (nginxUrl == "nginx_url_key" || nginxUrl == "") { // if key is default value or empty:
-                    null // don't overwrite anything
-                } else {
-                    ProvidersInfoJson(
-                        url = nginxUrl,
-                        name = NginxProvider().name,
-                        status = PROVIDER_STATUS_OK,
-                        credentials = nginxCredentials
-                    )
-                }
-            } catch (e: Exception) {
-                logError(e)
-                null
-            }
-        }
-
         // this pulls the latest data so ppl don't have to update to simply change provider url
         if (downloadFromGithub) {
             try {
@@ -483,11 +419,9 @@ class MainActivity : AppCompatActivity(), ColorPickerDialogListener {
                                         setKey(PROVIDER_STATUS_KEY, txt)
                                         MainAPI.overrideData = newCache // update all new providers
 
-                                        val newUpdatedCache =
-                                            newCache?.let { addNginxToJson(it) }
                                         initAll()
                                         for (api in apis) { // update current providers
-                                            newUpdatedCache?.get(api.javaClass.simpleName)
+                                            newCache?.get(api.javaClass.simpleName)
                                                 ?.let { data ->
                                                     api.overrideWithNewData(data)
                                                 }
@@ -505,15 +439,13 @@ class MainActivity : AppCompatActivity(), ColorPickerDialogListener {
                                 newCache
                             }?.let { providersJsonMap ->
                                 MainAPI.overrideData = providersJsonMap
-                                val providersJsonMapUpdated =
-                                    addNginxToJson(providersJsonMap) // if return null, use unchanged one
                                 initAll()
                                 val acceptableProviders =
-                                    providersJsonMapUpdated.filter { it.value.status == PROVIDER_STATUS_OK || it.value.status == PROVIDER_STATUS_SLOW }
+                                    providersJsonMap.filter { it.value.status == PROVIDER_STATUS_OK || it.value.status == PROVIDER_STATUS_SLOW }
                                         .map { it.key }.toSet()
 
                                 val restrictedApis =
-                                    if (hasBenene) providersJsonMapUpdated.filter { it.value.status == PROVIDER_STATUS_BETA_ONLY }
+                                    if (hasBenene) providersJsonMap.filter { it.value.status == PROVIDER_STATUS_BETA_ONLY }
                                         .map { it.key }.toSet() else emptySet()
 
                                 apis = allProviders.filter { api ->
@@ -538,16 +470,6 @@ class MainActivity : AppCompatActivity(), ColorPickerDialogListener {
         } else {
             initAll()
             apis = allProviders
-            try {
-                val nginxProviderName = NginxProvider().name
-                val nginxProviderIndex = apis.indexOf(APIHolder.getApiFromName(nginxProviderName))
-                val createdJsonProvider = createNginxJson()
-                if (createdJsonProvider != null) {
-                    apis[nginxProviderIndex].overrideWithNewData(createdJsonProvider) // people will have access to it if they disable metadata check (they are not filtered)
-                }
-            } catch (e: Exception) {
-                logError(e)
-            }
         }
 
         loadThemes(this)

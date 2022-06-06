@@ -20,6 +20,8 @@ class OpenSubtitlesApi(index: Int) : InAppAuthAPIManager(index), AbstractSubProv
     override val idPrefix = "opensubtitles"
     override val name = "OpenSubtitles"
     override val icon = R.drawable.open_subtitles_icon
+    override val requiresPassword = true
+    override val requiresUsername = true
 
     companion object {
         const val OPEN_SUBTITLES_USER_KEY: String = "open_subtitles_user" // user data like profile
@@ -79,12 +81,16 @@ class OpenSubtitlesApi(index: Int) : InAppAuthAPIManager(index), AbstractSubProv
     */
     override suspend fun initialize() {
         currentSession = getAuthKey() ?: return // just in case the following fails
-        login(getLatestLoginData() ?: return)
+        initLogin(currentSession?.user ?: return, currentSession?.pass ?: return)
     }
 
-    override suspend fun login(data: InAppAuthAPI.LoginData): Boolean {
-        val username = data.username ?: throw ErrorLoadingException("Requires Username")
-        val password = data.password ?: throw ErrorLoadingException("Requires Password")
+    override fun logOut() {
+        setAuthKey(null)
+        removeAccountKeys()
+        currentSession = getAuthKey()
+    }
+
+    private suspend fun initLogin(username: String, password: String): Boolean {
         Log.i(TAG, "DATA = [$username] [$password]")
         val response = app.post(
             url = "$host/login",
@@ -113,6 +119,18 @@ class OpenSubtitlesApi(index: Int) : InAppAuthAPIManager(index), AbstractSubProv
             }
             return true
         }
+        return false
+    }
+
+    override suspend fun login(data: InAppAuthAPI.LoginData): Boolean {
+        val username = data.username ?: throw ErrorLoadingException("Requires Username")
+        val password = data.password ?: throw ErrorLoadingException("Requires Password")
+        switchToNewAccount()
+        if (initLogin(username, password)) {
+            registerAccount()
+            return true
+        }
+        switchToOldAccount()
         return false
     }
 

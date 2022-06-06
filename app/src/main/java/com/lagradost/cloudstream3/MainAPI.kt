@@ -352,7 +352,8 @@ abstract class MainAPI {
 
     fun overrideWithNewData(data: ProvidersInfoJson) {
         this.name = data.name
-        this.mainUrl = data.url
+        if (data.url.isNotBlank() && data.url != "NONE")
+            this.mainUrl = data.url
         this.storedCredentials = data.credentials
     }
 

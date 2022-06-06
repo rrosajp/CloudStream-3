@@ -16,6 +16,7 @@ import com.lagradost.cloudstream3.mvvm.logError
 import com.lagradost.cloudstream3.syncproviders.AccountManager
 import com.lagradost.cloudstream3.syncproviders.AccountManager.Companion.aniListApi
 import com.lagradost.cloudstream3.syncproviders.AccountManager.Companion.malApi
+import com.lagradost.cloudstream3.syncproviders.AccountManager.Companion.nginxApi
 import com.lagradost.cloudstream3.syncproviders.AccountManager.Companion.openSubtitlesApi
 import com.lagradost.cloudstream3.syncproviders.AuthAPI
 import com.lagradost.cloudstream3.syncproviders.InAppAuthAPI
@@ -28,8 +29,7 @@ import com.lagradost.cloudstream3.utils.UIHelper.dismissSafe
 import com.lagradost.cloudstream3.utils.UIHelper.hideKeyboard
 import com.lagradost.cloudstream3.utils.UIHelper.setImage
 import kotlinx.android.synthetic.main.account_managment.*
-import kotlinx.android.synthetic.main.account_managment.account_profile_picture
-import kotlinx.android.synthetic.main.account_single.*
+import kotlinx.android.synthetic.main.account_switch.*
 import kotlinx.android.synthetic.main.add_account_input.*
 
 class SettingsAccount : PreferenceFragmentCompat() {
@@ -44,8 +44,8 @@ class SettingsAccount : PreferenceFragmentCompat() {
                 .setView(R.layout.account_managment)
         val dialog = builder.show()
 
-        dialog.account_profile_picture_holder?.isVisible =
-            dialog.account_profile_picture?.setImage(info.profilePicture) == true
+        dialog.account_main_profile_picture_holder?.isVisible =
+            dialog.account_main_profile_picture?.setImage(info.profilePicture) == true
 
         dialog.account_logout?.setOnClickListener {
             api.logOut()
@@ -139,8 +139,9 @@ class SettingsAccount : PreferenceFragmentCompat() {
             AlertDialog.Builder(context, R.style.AlertDialogCustom).setView(R.layout.account_switch)
         val dialog = builder.show()
 
-        dialog.findViewById<TextView>(R.id.account_add)?.setOnClickListener {
+        dialog.account_add?.setOnClickListener {
             addAccount(api)
+            dialog?.dismissSafe(activity)
         }
 
         val ogIndex = api.accountIndex
@@ -178,15 +179,12 @@ class SettingsAccount : PreferenceFragmentCompat() {
 
         val syncApis =
             listOf(
-                Pair(R.string.mal_key, malApi), Pair(
-                    R.string.anilist_key,
-                    aniListApi
-                ),
-                Pair(
-                    R.string.opensubtitles_key,
-                    openSubtitlesApi
-                )
+                R.string.mal_key to malApi,
+                R.string.anilist_key to aniListApi,
+                R.string.opensubtitles_key to openSubtitlesApi,
+                R.string.nginx_key to nginxApi,
             )
+
         for ((key, api) in syncApis) {
             getPref(key)?.apply {
                 title =

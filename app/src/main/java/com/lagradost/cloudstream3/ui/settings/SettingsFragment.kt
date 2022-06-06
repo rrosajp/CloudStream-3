@@ -135,7 +135,6 @@ class SettingsFragment : Fragment() {
             Pair(settings_credits, R.id.action_navigation_settings_to_navigation_settings_account),
             Pair(settings_ui, R.id.action_navigation_settings_to_navigation_settings_ui),
             Pair(settings_lang, R.id.action_navigation_settings_to_navigation_settings_lang),
-            Pair(settings_nginx, R.id.action_navigation_settings_to_navigation_settings_nginx),
             Pair(settings_updates, R.id.action_navigation_settings_to_navigation_settings_updates),
         ).forEach { (view, navigationId) ->
             view?.apply {

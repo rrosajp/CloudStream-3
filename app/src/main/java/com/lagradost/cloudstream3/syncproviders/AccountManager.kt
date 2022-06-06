@@ -5,6 +5,7 @@ import com.lagradost.cloudstream3.AcraApplication.Companion.removeKeys
 import com.lagradost.cloudstream3.AcraApplication.Companion.setKey
 import com.lagradost.cloudstream3.syncproviders.providers.AniListApi
 import com.lagradost.cloudstream3.syncproviders.providers.MALApi
+import com.lagradost.cloudstream3.syncproviders.providers.NginxApi
 import com.lagradost.cloudstream3.syncproviders.providers.OpenSubtitlesApi
 import java.util.concurrent.TimeUnit
 
@@ -13,6 +14,7 @@ abstract class AccountManager(private val defIndex: Int) : AuthAPI {
         val malApi = MALApi(0)
         val aniListApi = AniListApi(0)
         val openSubtitlesApi = OpenSubtitlesApi(0)
+        val nginxApi = NginxApi(0)
 
         // used to login via app intent
         val OAuth2Apis
@@ -22,8 +24,8 @@ abstract class AccountManager(private val defIndex: Int) : AuthAPI {
 
         // this needs init with context and can be accessed in settings
         val accountManagers
-            get() = listOf<AccountManager>(
-                malApi, aniListApi, openSubtitlesApi
+            get() = listOf(
+                malApi, aniListApi, openSubtitlesApi, nginxApi
             )
 
         // used for active syncing
@@ -33,7 +35,7 @@ abstract class AccountManager(private val defIndex: Int) : AuthAPI {
             )
 
         val inAppAuths
-            get() = listOf(openSubtitlesApi)
+            get() = listOf(openSubtitlesApi, nginxApi)
 
         val subtitleProviders
             get() = listOf(
@@ -71,6 +73,7 @@ abstract class AccountManager(private val defIndex: Int) : AuthAPI {
     }
 
     var accountIndex = defIndex
+    private var lastAccountIndex = defIndex
     protected val accountId get() = "${idPrefix}_account_$accountIndex"
     private val accountActiveKey get() = "${idPrefix}_active"
 
@@ -100,7 +103,11 @@ abstract class AccountManager(private val defIndex: Int) : AuthAPI {
 
     protected fun switchToNewAccount() {
         val accounts = getAccounts()
+        lastAccountIndex = accountIndex
         accountIndex = (accounts?.maxOrNull() ?: 0) + 1
+    }
+    protected fun switchToOldAccount() {
+        accountIndex = lastAccountIndex
     }
 
     protected fun registerAccount() {

@@ -28,8 +28,8 @@ interface InAppAuthAPI : AuthAPI {
 }
 
 abstract class InAppAuthAPIManager(defIndex: Int) : AccountManager(defIndex), InAppAuthAPI {
-    override val requiresPassword = true
-    override val requiresUsername = true
+    override val requiresPassword = false
+    override val requiresUsername = false
     override val requiresEmail = false
     override val requiresServer = false
     override val storesPasswordInPlainText = true
@@ -41,7 +41,7 @@ abstract class InAppAuthAPIManager(defIndex: Int) : AccountManager(defIndex), In
     }
 
     override fun logOut() {
-        removeAccountKeys()
+        throw NotImplementedError()
     }
 
     override val idPrefix: String
