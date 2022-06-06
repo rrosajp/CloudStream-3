@@ -1,6 +1,8 @@
 package com.lagradost.cloudstream3.ui.player
 
 import android.annotation.SuppressLint
+import android.app.Dialog
+import android.content.Context
 import android.content.Intent
 import android.os.Bundle
 import android.util.Log
@@ -33,9 +35,11 @@ import com.lagradost.cloudstream3.ui.subtitles.SubtitlesFragment
 import com.lagradost.cloudstream3.utils.*
 import com.lagradost.cloudstream3.utils.Coroutines.ioSafe
 import com.lagradost.cloudstream3.utils.SingleSelectionHelper.showDialog
+import com.lagradost.cloudstream3.utils.SubtitleHelper.languages
 import com.lagradost.cloudstream3.utils.UIHelper.dismissSafe
 import com.lagradost.cloudstream3.utils.UIHelper.hideSystemUI
 import com.lagradost.cloudstream3.utils.UIHelper.popCurrentPage
+import kotlinx.android.synthetic.main.dialog_online_subtitles.*
 import kotlinx.android.synthetic.main.fragment_player.*
 import kotlinx.android.synthetic.main.player_custom_layout.*
 import kotlinx.android.synthetic.main.player_select_source_and_subs.*
@@ -163,6 +167,91 @@ class GeneratorPlayer : FullScreenPlayer() {
         }
     }
 
+    private fun openOnlineSubPicker(context: Context, query: String, imdbId: Long?) {
+        val dialog = Dialog(context, R.style.AlertDialogCustomBlack)
+        dialog.setContentView(R.layout.dialog_online_subtitles)
+
+        val arrayAdapter =
+            ArrayAdapter<String>(dialog.context, R.layout.sort_bottom_single_choice)
+
+        dialog.show()
+
+        dialog.cancel_btt.setOnClickListener {
+            dialog.dismissSafe()
+        }
+
+        dialog.subtitle_adapter.choiceMode = AbsListView.CHOICE_MODE_SINGLE
+        dialog.subtitle_adapter.adapter = arrayAdapter
+        val adapter = dialog.subtitle_adapter.adapter as? ArrayAdapter<String>
+
+        var currentSubtitles: List<SubtitleData> = emptyList()
+        var currentSubtitle: SubtitleData? = null
+
+        dialog.subtitle_adapter.setOnItemClickListener { parent, view, position, id ->
+            currentSubtitle = currentSubtitles.getOrNull(position) ?: return@setOnItemClickListener
+        }
+
+        var currentLanguageTwoLetters: String? = null
+
+        fun setSubtitles(list: List<SubtitleData>) {
+            currentSubtitles = list
+            adapter?.clear()
+            adapter?.addAll(currentSubtitles.map { it.name })
+        }
+
+        dialog.subtitles_search.setOnQueryTextListener(object :
+            androidx.appcompat.widget.SearchView.OnQueryTextListener {
+            override fun onQueryTextSubmit(query: String?): Boolean {
+                dialog.search_loading_bar?.show()
+                val subs =
+                    listOf(
+                        // Testing
+                        SubtitleData(query.toString(), "URL", SubtitleOrigin.OPEN_SUBTITLES, ""),
+                        SubtitleData(query.toString(), "URL", SubtitleOrigin.OPEN_SUBTITLES, ""),
+                        SubtitleData(query.toString(), "URL", SubtitleOrigin.OPEN_SUBTITLES, ""),
+                        SubtitleData(query.toString(), "URL", SubtitleOrigin.OPEN_SUBTITLES, ""),
+                    )
+                setSubtitles(subs)
+                dialog.search_loading_bar?.hide()
+                return true
+            }
+
+            override fun onQueryTextChange(newText: String?): Boolean {
+                return true
+            }
+        })
+
+        dialog.search_filter.setOnClickListener {
+            val names = languages.map {
+                val emoji = SubtitleHelper.getFlagFromIso(it.ISO_639_1)
+                val name = it.languageName //SubtitleHelper.fromTwoLettersToLanguage(it)
+                val fullName = "${emoji?.let { "$it " } ?: ""}$name"
+                Pair(it, fullName)
+            }
+
+            activity?.let { act ->
+                act.showDialog(
+                    names.map { it.second },
+                    -1,
+                    "Subtitle Language",
+                    true,
+                    {}) { index ->
+                    currentLanguageTwoLetters = languages[index].ISO_639_1
+                }
+            }
+        }
+
+        dialog.apply_btt.setOnClickListener {
+            currentSubtitle?.let { currentSubtitle ->
+                viewModel.addSubtitles(setOf(currentSubtitle))
+            }
+            dialog.dismissSafe()
+        }
+
+        dialog.show()
+        dialog.subtitles_search.setQuery(query, true)
+    }
+
     private fun openSubPicker() {
         try {
             subsPathPicker.launch(
@@ -246,13 +335,26 @@ class GeneratorPlayer : FullScreenPlayer() {
                 val providerList = sourceDialog.sort_providers
                 val subtitleList = sourceDialog.sort_subtitles
 
-                val footer: TextView =
+                val loadFromFileFooter: TextView =
                     layoutInflater.inflate(R.layout.sort_bottom_footer_add_choice, null) as TextView
-                footer.text = ctx.getString(R.string.player_load_subtitles)
-                footer.setOnClickListener {
+
+                loadFromFileFooter.text = ctx.getString(R.string.player_load_subtitles)
+                loadFromFileFooter.setOnClickListener {
                     openSubPicker()
                 }
-                subtitleList.addFooterView(footer)
+                subtitleList.addFooterView(loadFromFileFooter)
+                val loadFromOpenSubsFooter: TextView =
+                    layoutInflater.inflate(R.layout.sort_bottom_footer_add_choice, null) as TextView
+
+                loadFromOpenSubsFooter.text =
+                    "Load from Internet" //ctx.getString(R.string.player_load_subtitles)
+
+                loadFromOpenSubsFooter.setOnClickListener {
+                    println("VIDEO TITLE ${getPlayerVideoTitle()}")
+                    openOnlineSubPicker(it.context, getPlayerVideoTitle(), null)
+                }
+                subtitleList.addFooterView(loadFromOpenSubsFooter)
+
 
                 var sourceIndex = 0
                 var startSource = 0
@@ -598,18 +700,15 @@ class GeneratorPlayer : FullScreenPlayer() {
         }
     }
 
-    @SuppressLint("SetTextI18n")
-    fun setTitle() {
+    private fun getPlayerVideoTitle(): String {
         var headerName: String? = null
         var subName: String? = null
         var episode: Int? = null
         var season: Int? = null
         var tvType: TvType? = null
 
-        var isFiller: Boolean? = null
         when (val meta = currentMeta) {
             is ResultEpisode -> {
-                isFiller = meta.isFiller
                 headerName = meta.headerName
                 subName = meta.name
                 episode = meta.episode
@@ -626,22 +725,24 @@ class GeneratorPlayer : FullScreenPlayer() {
         }
 
         //Generate video title
-        context?.let { ctx ->
-            var playerVideoTitle = if (headerName != null) {
-                (headerName +
-                        if (tvType.isEpisodeBased() && episode != null)
-                            if (season == null)
-                                " - ${ctx.getString(R.string.episode)} $episode"
-                            else
-                                " \"${ctx.getString(R.string.season_short)}${season}:${
-                                    ctx.getString(
-                                        R.string.episode_short
-                                    )
-                                }${episode}\""
-                        else "") + if (subName.isNullOrBlank() || subName == headerName) "" else " - $subName"
-            } else {
-                ""
-            }
+        val playerVideoTitle = if (headerName != null) {
+            (headerName +
+                    if (tvType.isEpisodeBased() && episode != null)
+                        if (season == null)
+                            " - ${getString(R.string.episode)} $episode"
+                        else
+                            " \"${getString(R.string.season_short)}${season}:${getString(R.string.episode_short)}${episode}\""
+                    else "") + if (subName.isNullOrBlank() || subName == headerName) "" else " - $subName"
+        } else {
+            ""
+        }
+        return playerVideoTitle
+    }
+
+
+    @SuppressLint("SetTextI18n")
+    fun setTitle() {
+        var playerVideoTitle = getPlayerVideoTitle()
 
             //Hide title, if set in setting
             if (limitTitle < 0) {
@@ -659,6 +760,10 @@ class GeneratorPlayer : FullScreenPlayer() {
             player_video_title?.text = playerVideoTitle
         }
 
+        val isFiller: Boolean? = (currentMeta as? ResultEpisode)?.isFiller
+
+        player_episode_filler_holder?.isVisible = isFiller ?: false
+        player_video_title?.text = playerVideoTitle
     }
 
     @SuppressLint("SetTextI18n")
