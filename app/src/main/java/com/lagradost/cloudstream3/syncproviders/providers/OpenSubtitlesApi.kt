@@ -9,6 +9,7 @@ import com.lagradost.cloudstream3.ErrorLoadingException
 import com.lagradost.cloudstream3.R
 import com.lagradost.cloudstream3.TvType
 import com.lagradost.cloudstream3.app
+import com.lagradost.cloudstream3.mvvm.logError
 import com.lagradost.cloudstream3.subtitles.AbstractSubProvider
 import com.lagradost.cloudstream3.subtitles.AbstractSubtitleEntities
 import com.lagradost.cloudstream3.syncproviders.AuthAPI
@@ -25,7 +26,7 @@ class OpenSubtitlesApi(index: Int) : InAppAuthAPIManager(index), AbstractSubProv
 
     companion object {
         const val OPEN_SUBTITLES_USER_KEY: String = "open_subtitles_user" // user data like profile
-        const val apiKey = "" // TODO MAKE NEW
+        const val apiKey = "uyBLgFD17MgrYmA0gSXoKllMJBelOYj2"
         const val host = "https://api.opensubtitles.com/api/v1"
         const val TAG = "OPENSUBS"
         const val coolDownDuration: Long = 1000L * 30L // CoolDown if 429 error code in ms
@@ -126,9 +127,14 @@ class OpenSubtitlesApi(index: Int) : InAppAuthAPIManager(index), AbstractSubProv
         val username = data.username ?: throw ErrorLoadingException("Requires Username")
         val password = data.password ?: throw ErrorLoadingException("Requires Password")
         switchToNewAccount()
-        if (initLogin(username, password)) {
-            registerAccount()
-            return true
+        try {
+            if (initLogin(username, password)) {
+                registerAccount()
+                return true
+            }
+        } catch (e: Exception) {
+            logError(e)
+            switchToOldAccount()
         }
         switchToOldAccount()
         return false
@@ -202,7 +208,6 @@ class OpenSubtitlesApi(index: Int) : InAppAuthAPIManager(index), AbstractSubProv
             }
         }
         return results
-
     }
 
     /*
