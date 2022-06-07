@@ -37,7 +37,9 @@ import com.lagradost.cloudstream3.ui.subtitles.SubtitlesFragment
 import com.lagradost.cloudstream3.ui.subtitles.SubtitlesFragment.Companion.getAutoSelectLanguageISO639_1
 import com.lagradost.cloudstream3.utils.*
 import com.lagradost.cloudstream3.utils.Coroutines.ioSafe
+import com.lagradost.cloudstream3.utils.Coroutines.runOnMainThread
 import com.lagradost.cloudstream3.utils.SingleSelectionHelper.showDialog
+import com.lagradost.cloudstream3.utils.SubtitleHelper.fromTwoLettersToLanguage
 import com.lagradost.cloudstream3.utils.SubtitleHelper.languages
 import com.lagradost.cloudstream3.utils.UIHelper.dismissSafe
 import com.lagradost.cloudstream3.utils.UIHelper.hideSystemUI
@@ -192,7 +194,7 @@ class GeneratorPlayer : FullScreenPlayer() {
                     meta.episode = newMeta.episode
                     meta.season = newMeta.season
                 }
-                meta.name = newMeta.name
+                meta.name = newMeta.headerName
             }
             is ExtractorUri -> {
                 if (newMeta.tvType?.isMovieType() == false) {
@@ -228,8 +230,8 @@ class GeneratorPlayer : FullScreenPlayer() {
         dialog.subtitle_adapter.adapter = arrayAdapter
         val adapter = dialog.subtitle_adapter.adapter as? ArrayAdapter<String>
 
-        var currentSubtitles: List<SubtitleData> = emptyList()
-        var currentSubtitle: SubtitleData? = null
+        var currentSubtitles: List<AbstractSubtitleEntities.SubtitleEntity> = emptyList()
+        var currentSubtitle: AbstractSubtitleEntities.SubtitleEntity? = null
 
         dialog.subtitle_adapter.setOnItemClickListener { _, _, position, _ ->
             currentSubtitle = currentSubtitles.getOrNull(position) ?: return@setOnItemClickListener
@@ -237,10 +239,19 @@ class GeneratorPlayer : FullScreenPlayer() {
 
         var currentLanguageTwoLetters: String = getAutoSelectLanguageISO639_1()
 
-        fun setSubtitlesList(list: List<SubtitleData>) {
+        fun getName(entry: AbstractSubtitleEntities.SubtitleEntity): String {
+            return if (entry.lang.isBlank()) {
+                entry.name
+            } else {
+                val language = fromTwoLettersToLanguage(entry.lang.trim()) ?: entry.lang
+                return "$language ${entry.name}"
+            }
+        }
+
+        fun setSubtitlesList(list: List<AbstractSubtitleEntities.SubtitleEntity>) {
             currentSubtitles = list
             adapter?.clear()
-            adapter?.addAll(currentSubtitles.map { it.name })
+            adapter?.addAll(currentSubtitles.map { getName(it) })
         }
 
         val currentTempMeta = getMetaData()
@@ -267,18 +278,11 @@ class GeneratorPlayer : FullScreenPlayer() {
                     val max = results.map { it.size }.maxOrNull() ?: return@ioSafe
 
                     // very ugly
-                    val items = ArrayList<SubtitleData>()
+                    val items = ArrayList<AbstractSubtitleEntities.SubtitleEntity>()
                     val arrays = results.size
                     for (index in 0 until max) {
                         for (i in 0 until arrays) {
-                            val current = results[i].getOrNull(index) ?: continue
-                            val entry = SubtitleData(
-                                current.name,
-                                current.data,
-                                SubtitleOrigin.OPEN_SUBTITLES, // TODO FIX
-                                ""
-                            )
-                            items.add(entry)
+                            items.add(results[i].getOrNull(index) ?: continue)
                         }
                     }
 
@@ -307,13 +311,26 @@ class GeneratorPlayer : FullScreenPlayer() {
                 { }
             ) { index ->
                 currentLanguageTwoLetters = lang639_1[index]
+                dialog.subtitles_search.setQuery(dialog.subtitles_search.query, true)
             }
         }
 
         dialog.apply_btt.setOnClickListener {
             currentSubtitle?.let { currentSubtitle ->
-                setSubtitles(currentSubtitle)
-                viewModel.addSubtitles(setOf(currentSubtitle))
+                providers.firstOrNull { it.idPrefix == currentSubtitle.idPrefix }?.let { api ->
+                    ioSafe {
+                        val url = api.load(currentSubtitle) ?: return@ioSafe
+                        val subtitle = SubtitleData(
+                            name = getName(currentSubtitle),
+                            url = url,
+                            origin = SubtitleOrigin.URL,
+                            mimeType = url.toSubtitleMimeType()
+                        )
+                        runOnMainThread {
+                            addAndSelectSubtitles(subtitle)
+                        }
+                    }
+                }
             }
             dialog.dismissSafe()
         }
@@ -346,6 +363,27 @@ class GeneratorPlayer : FullScreenPlayer() {
         }
     }
 
+    private fun addAndSelectSubtitles(subtitleData: SubtitleData) {
+        val ctx = context ?: return
+        setSubtitles(subtitleData)
+
+        // this is used instead of observe, because observe is too slow
+        val subs = currentSubs.toMutableSet()
+        subs.add(subtitleData)
+        player.setActiveSubtitles(subs)
+        player.reloadPlayer(ctx)
+
+        viewModel.addSubtitles(setOf(subtitleData))
+
+        selectSourceDialog?.dismissSafe()
+
+        showToast(
+            activity,
+            String.format(ctx.getString(R.string.player_loaded_subtitles), subtitleData.name),
+            Toast.LENGTH_LONG
+        )
+    }
+
     // Open file picker
     private val subsPathPicker =
         registerForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
@@ -371,23 +409,7 @@ class GeneratorPlayer : FullScreenPlayer() {
                     name.toSubtitleMimeType()
                 )
 
-                setSubtitles(subtitleData)
-
-                // this is used instead of observe, because observe is too slow
-                val subs = currentSubs.toMutableSet()
-                subs.add(subtitleData)
-                player.setActiveSubtitles(subs)
-                player.reloadPlayer(ctx)
-
-                viewModel.addSubtitles(setOf(subtitleData))
-
-                selectSourceDialog?.dismissSafe()
-
-                showToast(
-                    activity,
-                    String.format(ctx.getString(R.string.player_loaded_subtitles), name),
-                    Toast.LENGTH_LONG
-                )
+                addAndSelectSubtitles(subtitleData)
             }
         }
 
@@ -418,7 +440,6 @@ class GeneratorPlayer : FullScreenPlayer() {
                     openSubPicker()
                 }
                 subtitleList.addFooterView(loadFromFileFooter)
-
 
                 var shouldDismiss = true
 

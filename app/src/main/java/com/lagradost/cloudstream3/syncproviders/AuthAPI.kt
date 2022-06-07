@@ -6,6 +6,8 @@ interface AuthAPI {
 
     val requiresLogin: Boolean
 
+    val createAccountUrl : String?
+
     // don't change this as all keys depend on it
     val idPrefix: String
 

@@ -4,6 +4,7 @@ import com.lagradost.cloudstream3.TvType
 
 class AbstractSubtitleEntities {
     data class SubtitleEntity(
+        var idPrefix : String,
         var name: String = "", //Title of movie/series. This is the one to be displayed when choosing.
         var lang: String = "en",
         var data: String = "", //Id or link, depends on provider how to process

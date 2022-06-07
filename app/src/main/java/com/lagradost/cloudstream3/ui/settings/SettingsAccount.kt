@@ -1,11 +1,14 @@
 package com.lagradost.cloudstream3.ui.settings
 
 import android.content.Context
+import android.content.Intent
+import android.net.Uri
 import android.os.Bundle
 import android.view.View
 import android.widget.TextView
 import androidx.annotation.UiThread
 import androidx.appcompat.app.AlertDialog
+import androidx.core.view.isGone
 import androidx.core.view.isVisible
 import androidx.preference.PreferenceFragmentCompat
 import androidx.preference.PreferenceManager
@@ -79,6 +82,16 @@ class SettingsAccount : PreferenceFragmentCompat() {
                     dialog.login_password_input?.isVisible = api.requiresPassword
                     dialog.login_server_input?.isVisible = api.requiresServer
                     dialog.login_username_input?.isVisible = api.requiresUsername
+                    dialog.create_account?.isGone = api.createAccountUrl.isNullOrBlank()
+                    dialog.create_account?.setOnClickListener {
+                        val i = Intent(Intent.ACTION_VIEW)
+                        i.data = Uri.parse(api.createAccountUrl)
+                        try {
+                            startActivity(i)
+                        } catch (e: Exception) {
+                            logError(e)
+                        }
+                    }
                     dialog.text1?.text = api.name
 
                     if (api.storesPasswordInPlainText) {

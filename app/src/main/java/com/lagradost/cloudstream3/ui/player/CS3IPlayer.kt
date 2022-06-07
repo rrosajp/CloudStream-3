@@ -815,13 +815,6 @@ class CS3IPlayer : IPlayer {
                         null
                     }
                 }
-                SubtitleOrigin.OPEN_SUBTITLES -> {
-                    activeSubtitles.add(sub)
-                    SingleSampleMediaSource.Factory(
-                        onlineSourceFactory ?: offlineSourceFactory ?: return@mapNotNull null
-                    )
-                        .createMediaSource(subConfig, C.TIME_UNSET)
-                }
                 SubtitleOrigin.EMBEDDED_IN_VIDEO -> {
                     if (offlineSourceFactory != null) {
                         activeSubtitles.add(sub)

@@ -21,7 +21,6 @@ enum class SubtitleStatus {
 enum class SubtitleOrigin {
     URL,
     DOWNLOADED_FILE,
-    OPEN_SUBTITLES,
     EMBEDDED_IN_VIDEO
 }
 

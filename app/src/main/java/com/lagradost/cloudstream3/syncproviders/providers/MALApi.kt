@@ -36,6 +36,8 @@ class MALApi(index: Int) : AccountManager(index), SyncAPI {
     override val icon = R.drawable.mal_logo
     override val requiresLogin = true
 
+    override val createAccountUrl = "$mainUrl/register.php"
+
     override fun logOut() {
         removeAccountKeys()
     }
