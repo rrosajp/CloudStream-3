@@ -32,29 +32,30 @@ for path in allProvidersList:
             provider_url: str = [*findall(URL_REGEX, site_text), ""][0]
             lang: str = [*findall(LANG_REGEX, site_text), "en"][0]
 
-            if name in old_sites.keys():  # if already in previous list use old status and name
+            if name in old_sites:  # if already in previous list use old status and name
                 sites[name] = {
                     "name": old_sites[name]['name'],
-                    "url": provider_url if provider_url else old_sites[name]['url'],
+                    "url": provider_url or old_sites[name]['url'],
                     "status": old_sites[name]['status'],
-                    "language": lang
+                    "language": lang,
                 }
+
             else: # if not in previous list add with new data
                 display_name: str = [*findall(NAME_REGEX, site_text), name][0]
-                if display_name.endswith("Provider"):
-                    display_name = display_name[:-len("Provider")]
+                display_name = display_name.removesuffix("Provider")
                 sites[name] = {
                     "name": display_name,
-                    "url": provider_url if provider_url else "",
+                    "url": provider_url or "",
                     "status": 1,
-                    "language": lang
+                    "language": lang,
                 }
+
 
         except Exception as ex:
             print("Error => {0}: {1}".format(path, ex))
 
 # add sites from old_sites that are missing in new list
-for name in old_sites.keys():
+for name in old_sites:
     if name not in sites.keys():
         sites[name] = {
             "name": old_sites[name]['name'],
